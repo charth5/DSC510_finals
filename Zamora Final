@@ -1,0 +1,80 @@
+#DSC 510
+#Programming Assignment Week 12
+#Jesse Zamora
+#06/06/2021
+
+import tkinter as tk
+import time
+import requests
+
+# API Connection Test
+def weather_connection():
+    for connect_url in ["https://api.openweathermap.org"]:
+        try:
+            response = requests.get(connect_url)
+            response.raise_for_status()
+        except HTTPError as http_err:
+            print(f'HTTP error: {http_err}')
+        except Exception as err:
+            print(f'Other error: {err}')
+        else:
+            print("Excellent")
+
+def getWeather(canvas):
+    city = textField.get()
+    api = "https://api.openweathermap.org/data/2.5/weather?q="+city+"&appid=4653497df158997d4834b08982350047&units=imperial"
+
+    json_data = requests.get(api).json()
+    condition = json_data['weather'][0]['main']
+    temp = int(json_data['main']['temp'])
+    min_temp = int(json_data['main']['temp_min'])
+    max_temp = int(json_data['main']['temp_max'])
+    pressure = json_data['main']['pressure']
+    humidity = json_data['main']['humidity']
+    wind = json_data['wind']['speed']
+    sunrise = time.strftime('%I:%M:%S', time.gmtime(json_data['sys']['sunrise'] - 21600))
+    sunset = time.strftime('%I:%M:%S', time.gmtime(json_data['sys']['sunset'] - 21600))
+
+    final_info = condition + "\n" + str(temp) + "°F"
+    final_data = "\n"+ "Min Temp: " + str(min_temp) + "°F" + "\n" + "Max Temp: " + str(max_temp) + "°F" +"\n" + "Pressure: " + str(pressure) + "\n" +"Humidity: " + str(humidity) + "\n" +"Wind Speed: " + str(wind) + "\n" + "Sunrise: " + sunrise + "\n" + "Sunset: " + sunset
+    label1.config(text = final_info)
+    label2.config(text = final_data)
+
+canvas = tk.Tk()
+canvas.geometry("700x500")
+canvas.title("One Stop Weather")
+f = ("Courier", 15, "bold")
+t = ("Courier", 35, "bold")
+
+textField = tk.Entry(canvas, justify='center', width = 20, font = t)
+textField.pack(pady = 20)
+textField.focus()
+textField.bind('<Return>', getWeather)
+
+label1 = tk.Label(canvas, font=t)
+label1.pack()
+label2 = tk.Label(canvas, font=f)
+label2.pack()
+canvas.mainloop()
+
+def main ():
+
+    canvas = tk.Tk()
+    canvas.geometry("700x500")
+    canvas.title("One Stop Weather")
+    f = ("Courier", 15, "bold")
+    t = ("Courier", 35, "bold")
+
+    textField = tk.Entry(canvas, justify='center', width = 20, font = t)
+    textField.pack(pady = 20)
+    textField.focus()
+    textField.bind('<Return>', getWeather)
+
+    label1 = tk.Label(canvas, font=t)
+    label1.pack()
+    label2 = tk.Label(canvas, font=f)
+    label2.pack()
+    canvas.mainloop()
+
+if __name__ == "__main__":
+    main()
