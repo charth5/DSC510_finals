@@ -1,0 +1,246 @@
+# Author: Charles Thurston
+# DSC 510 Final Project
+# Date 06/01/2021
+# This program is designed to allow the user to look up current weather conditions
+# by city and state or zip code and choose between Kelvin, Celsius and Fahrenheit to display temperatures
+
+import requests
+import pandas as pd
+import re
+import sys
+
+# function designed to request data based on user input of city and state
+def city_lookup():
+	city_name = input("Please enter the city: ")
+	state_code = input("Please enter the state abbreviation: ")
+	validate_city_state(city_name, state_code) # move variables from this function to a validate function
+	temp_choice = input("Please enter K for Kelvin, C for Celsius, or F for Fahrenheit: ")
+	api_key = "9b4514e28b7c0b1ecb16e12083b2d8ec"
+	base_url = "http://api.openweathermap.org/data/2.5/weather?q="
+
+	# if statement that is chosen based on user input for temp_choice variable
+	try:
+		if temp_choice.upper() == 'K':
+			kelvin_url = base_url + city_name + ',' + state_code + ",us&appid=" + api_key
+			res_k = requests.get(kelvin_url)
+			res_k.raise_for_status()
+			results_k = res_k.json()
+			city_results_k(results_k, city_name, state_code, temp_choice) # pass results to display output
+		elif temp_choice.upper() == 'C':
+			celsius_url = base_url + city_name + ',' + state_code + ",us&units=metric" + "&appid=" + api_key
+			res_c = requests.get(celsius_url)
+			res_c.raise_for_status()
+			results_c = res_c.json()
+			city_results_c(results_c, city_name, state_code, temp_choice) # pass results to display output
+		elif temp_choice.upper() == 'F':
+			fahrenheit_url = base_url + city_name + ',' + state_code + ",us&units=imperial" + "&appid=" + api_key
+			res_f = requests.get(fahrenheit_url)
+			res_f.raise_for_status()
+			results_f = res_f.json()
+			city_results_f(results_f, city_name, state_code, temp_choice) # pass results to display output
+		else:
+			print("Invalid entry, please try again.")
+	except requests.exceptions.HTTPError as error: # exception to handle if there are issues with HTTP searches
+		print(error)
+	except requests.exceptions.ConnectionError as error: # exception to handle connection error
+		print(error)
+
+def validate_city_state(city_name, state_code): # function to validate the user input for city and state
+	#get city list from OpenWeatherMap, read to pandas dataframe
+	list_url = "http://bulk.openweathermap.org/sample/city.list.json.gz"
+	df = pd.read_json(list_url)
+
+	#search dataframe for city_name, state_code combo
+	location_query = df.loc[(df['name']==city_name) & (df['state']==state_code) & (df['country']=='US'),['id','name','state','country','coord']]
+
+	if len(location_query) == 1:
+		longitude = location_query.coord.str['lon'].iloc[0]
+		latitude = location_query.coord.str['lat'].iloc[0]
+		city_name = str(location_query['name'].iloc[0]).strip()
+		state_code = str(location_query['state'].iloc[0]).strip()
+	else:
+		print("No city, state found. Please try again")
+
+	return city_name, state_code
+
+# function to display city_lookup results for Kelvin temps
+def city_results_k(results_k, city_name, state_code, temp_choice):
+	location = results_k['name']
+	temp = results_k['main']['temp']
+	high_temp = results_k['main']['temp_max']
+	low_temp = results_k['main']['temp_min']
+	press = results_k['main']['pressure']
+	humid = results_k['main']['humidity']
+
+	print("Weather for " + city_name + ", " + state_code)
+	print("Current Temperature is " + str(temp) + "°" + str(temp_choice) + ".")
+	print("High Temperature is " + str(high_temp) + "°" + str(temp_choice) + ".")
+	print("Low Temperature is " + str(low_temp) + "°" + str(temp_choice) + ".")
+	print("Pressure is {} hPA".format(press))
+	print("Humidity is {}%".format(humid))
+
+# function to display city_lookup results for Celsius temps
+def city_results_c(results_c, city_name, state_code, temp_choice):
+	location = results_c['name']
+	temp = results_c['main']['temp']
+	high_temp = results_c['main']['temp_max']
+	low_temp = results_c['main']['temp_min']
+	press = results_c['main']['pressure']
+	humid = results_c['main']['humidity']
+
+	print("Weather for " + city_name + ", " + state_code)
+	print("Current Temperature is " + str(temp) + "°" + str(temp_choice) + ".")
+	print("High Temperature is " + str(high_temp) + "°" + str(temp_choice) + ".")
+	print("Low Temperature is " + str(low_temp) + "°" + str(temp_choice) + ".")
+	print("Pressure is {} hPA".format(press))
+	print("Humidity is {}%".format(humid))
+
+# function to display city_lookup results for Fahrenheit temps
+def city_results_f(results_f, city_name, state_code, temp_choice):
+	location = results_f['name']
+	temp = results_f['main']['temp']
+	high_temp = results_f['main']['temp_max']
+	low_temp = results_f['main']['temp_min']
+	press = results_f['main']['pressure']
+	humid = results_f['main']['humidity']
+
+	print("Weather for " + city_name + ", " + state_code)
+	print("Current Temperature is " + str(temp) + "°" + str(temp_choice) + ".")
+	print("High Temperature is " + str(high_temp) + "°" + str(temp_choice) + ".")
+	print("Low Temperature is " + str(low_temp) + "°" + str(temp_choice) + ".")
+	print("Pressure is {} hPA".format(press))
+	print("Humidity is {}%".format(humid))
+
+def zip_validation(): # function to check the user input of zip code for proper format
+	zip_code = ""
+
+	while zip_code == "":
+		zip_code = input("Enter a 5 digit zip code: ")
+
+		is_valid = re.search(r'\b\d{5}\b', zip_code)
+		if not is_valid:
+			zip_code = ""
+			print("\n***Zip code can only be 5 numbers***\n")
+
+	zip_lookup(zip_code) #pass zip_code variable to zip_lookup function
+
+# function designed to request data based on user input of zip code
+def zip_lookup(zip_code):
+	temp_choice = input("Please enter K for Kelvin, C for Celsius, or F for Fahrenheit: ")
+	api_key = '9b4514e28b7c0b1ecb16e12083b2d8ec'
+
+	base_url = "http://api.openweathermap.org/data/2.5/weather?q="
+
+	# if statement that is chosen based on user input for temp_choice variable
+	try:
+		if temp_choice.upper() == 'K':
+			kelvin_url = base_url + str(zip_code) + ",us&appid=" + api_key
+			res_k = requests.get(kelvin_url)
+			res_k.raise_for_status()
+			results_k = res_k.json()
+			zip_results_k(results_k, temp_choice) # pass results to display output
+		elif temp_choice.upper() == 'C':
+			celsius_url = base_url + str(zip_code) + ",us&units=metric" + "&appid=" + api_key
+			res_c = requests.get(celsius_url)
+			res_c.raise_for_status()
+			results_c = res_c.json()
+			zip_results_c(results_c, temp_choice) # pass results to display output
+		elif temp_choice.upper() == 'F':
+			fahrenheit_url = base_url + str(zip_code) + ",us&units=imperial" + "&appid=" + api_key
+			res_f = requests.get(fahrenheit_url)
+			res_f.raise_for_status()
+			results_f = res_f.json()
+			zip_results_f(results_f, temp_choice) # pass results to display output
+		else:
+			print("Invalid entry, please try again.")
+	except requests.exceptions.HTTPError as error: # exception to handle if there are issues with HTTP searches
+		print(error)
+	except requests.ConnectionError as error: # exception to handle connection error
+		print(error)
+
+# function to display zip_lookup results for Kelvin temps
+def zip_results_k(results_k, temp_choice):
+	city_name = results_k['name']
+	temp = results_k['main']['temp']
+	high_temp = results_k['main']['temp_max']
+	low_temp = results_k['main']['temp_min']
+	press = results_k['main']['pressure']
+	humid = results_k['main']['humidity']
+
+	print("Weather for " + city_name + ".")
+	print("Current Temperature is " + str(temp) + "°" + str(temp_choice) + ".")
+	print("High Temperature is " + str(high_temp) + "°" + str(temp_choice) + ".")
+	print("Low Temperature is " + str(low_temp) + "°" + str(temp_choice) + ".")
+	print("Pressure is {} hPA".format(press))
+	print("Humidity is {}%".format(humid))
+
+# function to display zip_lookup results for Kelvin temps
+def zip_results_c(results_c, temp_choice):
+	city_name = results_c['name']
+	temp = results_c['main']['temp']
+	high_temp = results_c['main']['temp_max']
+	low_temp = results_c['main']['temp_min']
+	press = results_c['main']['pressure']
+	humid = results_c['main']['humidity']
+
+	print("Weather for " + city_name + ".")
+	print("Current Temperature is " + str(temp) + "°" + str(temp_choice) + ".")
+	print("High Temperature is " + str(high_temp) + "°" + str(temp_choice) + ".")
+	print("Low Temperature is " + str(low_temp) + "°" + str(temp_choice) + ".")
+	print("Pressure is {} hPA".format(press))
+	print("Humidity is {}%".format(humid))
+
+# function to display zip_lookup results for Kelvin temps
+def zip_results_f(results_f, temp_choice):
+	city_name = results_f['name']
+	temp = results_f['main']['temp']
+	high_temp = results_f['main']['temp_max']
+	low_temp = results_f['main']['temp_min']
+	press = results_f['main']['pressure']
+	humid = results_f['main']['humidity']
+
+	print("Weather for " + city_name + ".")
+	print("Current Temperature is " + str(temp) + "°" + str(temp_choice) + ".")
+	print("High Temperature is " + str(high_temp) + "°" + str(temp_choice) + ".")
+	print("Low Temperature is " + str(low_temp) + "°" + str(temp_choice) + ".")
+	print("Pressure is {} hPA".format(press))
+	print("Humidity is {}%".format(humid))
+
+def main(): # function to greet the user and do a connection test prior to searching for weather data
+	print("Welcome to the Current Weather App!")
+
+	test_url = 'https://api.openweathermap.org/data/2.5/weather?q={},us&' \
+	'appid=9b4514e28b7c0b1ecb16e12083b2d8ec&units=imperial'.format('Omaha')
+
+	# try/except to test and display connection status to user
+	try:
+		requests.get(test_url)
+
+	except requests.ConnectionError:
+
+		conn_result = "Connection Status: Disconnected."
+		print(conn_result)
+		quit() # close program if there is no connection for searches to be completed
+
+	else:
+
+		conn_result = "Connection Status: Connected."
+		print(conn_result)
+
+	choose = None
+
+	# loop to allow the user to complete multiple searches after displaying each result
+	while True:
+		choose = int(input("Please type 1 for city, 2 for zip code lookup or 3 to quit: "))
+		try:
+			if choose == 1:
+				city_lookup()
+			elif choose == 2:
+				zip_validation()
+			elif choose == 3:
+				sys.exit("Thank you for using the weather app. Have a great day!")
+		except ValueError: # exception handling to verify the user inputs a number choice
+			print("This is not a valid selection. Please try again.")
+
+if __name__ == '__main__':
+	main()
